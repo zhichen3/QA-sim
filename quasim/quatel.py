@@ -117,5 +117,5 @@ class QuaTel:
             return N_xy*(1-vis*np.cos(w_f*t+ph))
 
         
-  #  def precision(self):
+  #  def precision(self)
         
