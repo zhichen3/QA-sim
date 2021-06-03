@@ -1,1 +1,0 @@
-from .quatel.py import QuaTel
