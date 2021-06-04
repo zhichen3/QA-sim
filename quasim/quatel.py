@@ -23,12 +23,9 @@ class QuaTel:
         self.Omega_E = 7.292*10.0**(-5.0)     # Earth Rotation speed (+z) [rad/sec]
         
     def get_w_f(self, pos, lam):
-
         # pos enter in 2-D array [[RA1,DEC1],[RA2,DEC2]] in rad
         # lambda in meter
-        # s1 and s2 are the spectral flux density of two sources
-        # type_xy: enter 'pos' for cg,dh and 'neg' for ch,dg
-        
+  
         pos = np.array(pos)
 
         if (np.absolute(pos[:,1]-self.DEC) >= (np.pi/2.)).all():
@@ -65,7 +62,7 @@ class QuaTel:
             return pos
 
 
-        # Find Change in THETA in 1sec, aka Omega_E
+        # Find Change in THETA in new coord in 1sec:
 
         Omega_E_new = abs(source_pos(pos,1)[0,1] - source_pos(pos,2)[0,1])
         
@@ -95,7 +92,9 @@ class QuaTel:
         # find w_f use func above
         # assume length of integration is small compared to fringe period
         # dt << 1/w_f , let dt = 0.01(1/w_f)
-        
+        # s1 and s2 are the spectral flux density of two sources
+        # type_xy: enter 'pos' for cg,dh and 'neg' for ch,dg
+
         dt = 0.01/w_f
         
         k_const = self.tau*10**(-9)*dt*(self.A*self.BW*10**(9)*lam/constants.h/constants.c)**2
