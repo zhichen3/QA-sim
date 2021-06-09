@@ -9,9 +9,9 @@ from scipy import constants
 
 class QuaTel:
     
-    def __init__(self, N=2, B=200, A=1.0, tau=0.15, DL = 0.0, RA=1.3, DEC=0.71):
+    def __init__(self, N=2, B=200, A=1.0, tau=0.15, DL = 0.0, RA=-1.3, DEC=0.71):
 
-        self.N = N
+        self.N = N                            # Only works for N=2 for now.
         self.B = B                            # baseline in meter
         self.A = A                            # collecting Area in meter-squared
         self.tau = tau                        # time bin for correlation in ns
@@ -46,11 +46,11 @@ class QuaTel:
             N = ti.size
 
             #change from spherical to cartesian for easier rotation:
-            x1 = np.sin(posi[0,1])*np.cos(posi[0,0]+self.Omega_E*ti)  #x,y for source 1
-            y1 = np.sin(posi[0,1])*np.sin(posi[0,0]+self.Omega_E*ti)
+            x1 = np.sin(posi[0,1])*np.cos(posi[0,0]-self.Omega_E*ti)  #x,y for source 1
+            y1 = np.sin(posi[0,1])*np.sin(posi[0,0]-self.Omega_E*ti)
 
-            x2 = np.sin(posi[1,1])*np.cos(posi[1,0]+self.Omega_E*ti)  #x,y for source 2
-            y2 = np.sin(posi[1,1])*np.sin(posi[1,0]+self.Omega_E*ti)
+            x2 = np.sin(posi[1,1])*np.cos(posi[1,0]-self.Omega_E*ti)  #x,y for source 2
+            y2 = np.sin(posi[1,1])*np.sin(posi[1,0]-self.Omega_E*ti)
 
             x = np.vstack((x1,x2))   #[[x1t1,x1t2,...],[x2t1,x2t2,...]]
             y = np.vstack((y1,y2))
@@ -74,7 +74,7 @@ class QuaTel:
             return new_posi
 
 
-        # Find delta_THETA
+        # Find delta_THETA: total angle diff (THETA PHI) or just angle diff in THETA? 
         D_THETA = source_pos(pos,np.array([0.]))[0,0,1] - source_pos(pos,np.array([0.]))[1,0,1]
 
         #Let the source with smaller THETA be THETA_0
@@ -85,43 +85,39 @@ class QuaTel:
 
         D_THETA = abs(D_THETA)
 
-        # Find Omega_E in new coord that depends on time:
-        Omega_E_sam = np.absolute(source_pos(pos,np.array([1.]))[0,0,1] - source_pos(pos,np.array([2.]))[0,0,1])
+        # Omega_E_sam = np.absolute(source_pos(pos,np.array([1.]))[0,0,1] - source_pos(pos,np.array([2.]))[0,0,1])
 
-        #Find w_f_sam, sample fringe rate used to approx time interval
+        # Use self.Omega_E for w_f_ref since Omega_E is the largest possible value for change in THETA 
+        #Find w_f_ref, reference fringe rate used to approx time interval
         if (D_THETA < 0.1):
-            w_f_sam = (2.0*np.pi*self.B*Omega_E_sam*np.sin(THETA_0)*D_THETA)/lam
+            w_f_ref = (2.0*np.pi*self.B*self.Omega_E*np.sin(THETA_0)*D_THETA)/lam
         else:
-            w_f_sam= (2.0*np.pi*self.B*Omega_E_sam/lam)*(np.sin(THETA_0)*
+            w_f_ref= (2.0*np.pi*self.B*self.Omega_E/lam)*(np.sin(THETA_0)*
                     np.sin(D_THETA)+np.cos(THETA_0)*(1-np.cos(D_THETA)))
+
 
         #approximate time interval then break up period into small time intervals
         #assume dt << 1/w_f
-        dt = 0.08/w_f_sam
+        dt = 0.08/w_f_ref
 
         t = np.linspace(0.0, T, int(T/dt)) 
 
-        # Recalculate Omega_E and w_f  more accurately since it depends on time, only changes slightly:
+
+        # Calculate actual Omega_E and w_f  more accurately since it depends on time:
         pos_t1 = source_pos(pos,t)
         pos_t2 = source_pos(pos,t+dt)
         Omega_E_new =(np.absolute(pos_t1[0,:,1] - pos_t2[0,:,1]))/dt
 
+       
+        
         if (D_THETA < 0.1): 
             w_f = (2.0*np.pi*self.B*Omega_E_new*np.sin(THETA_0)*D_THETA)/lam   #w_f: 1-D with N-ele
         else:
             w_f = (2.0*np.pi*self.B*Omega_E_new/lam)*(np.sin(THETA_0)*
                     np.sin(D_THETA)+np.cos(THETA_0)*(1-np.cos(D_THETA)))
-            
-    
-        #redefine dt
-        dt = 0.08/w_f
 
-        #Let dt = 0 when one of the sources abs(THETA) go beyond 90deg, so N_xy = 0.
-        #Not sure if this feature is working properly
-        cond1 = np.where(np.absolute(pos_t1[0,:,1]) > (np.pi/2.0))
-        cond2 = np.where(np.absolute(pos_t1[1,:,1]) > (np.pi/2.0))
-        dt[cond1] = 0.0
-        dt[cond2] = 0.0
+        
+       # dt[cond] = 0.0
         
         k_const = self.tau*10**(-9)*dt*(self.A*self.BW*10**(9)*lam/constants.h/constants.c)**2
 
@@ -132,14 +128,22 @@ class QuaTel:
         #phase term due to instrumental length diff
         ph = 2.0*np.pi*self.DL/lam
 
+        res_pos = N_xy*(1+vis*np.cos(w_f*t+ph))
+        res_neg = N_xy*(1-vis*np.cos(w_f*t+ph))
 
+        # let res=0 when sources are out of sight due to rotation.
+
+        cond = np.where(  (np.absolute(pos_t1[0,:,1])>(np.pi/2.)) | (np.absolute(pos_t1[1,:,1]) > (np.pi/2.)) )
+        res_pos[cond] = 0.0
+        res_neg[cond] = 0.0
+        
         if (type_xy == 'pos'):
 
-            return N_xy*(1+vis*np.cos(w_f*t+ph)), t
+            return res_pos, t, w_f
         
         elif (type_xy == 'neg'):             
 
-            return N_xy*(1-vis*np.cos(w_f*t+ph)), t
+            return res_neg, t, w_f
 
         
   #  def precision(self)
