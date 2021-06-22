@@ -85,12 +85,13 @@ class BSC_process:
 
         def dis_diff(posi):
             # posi in (N,2,4) array and convert posi from RA,DEC to carte
-            posi[:,:,2] = np.pi/2 - posi[:,:,2]        #DEC to THETA
+            new_posi = np.zeros((len(posi),2,4))
+            new_posi[:,:,2] = np.pi/2 - posi[:,:,2]        #DEC to THETA
             
             #change from spherical to cartesian
-            x = np.sin(posi[:,:,2])*np.cos(posi[:,:,1])     #x,y,z for all pairs (N,2)
-            y = np.sin(posi[:,:,2])*np.sin(posi[:,:,1])
-            z = np.cos(posi[:,:,2])
+            x = np.sin(new_posi[:,:,2])*np.cos(posi[:,:,1])     #x,y,z for all pairs (N,2)
+            y = np.sin(new_posi[:,:,2])*np.sin(posi[:,:,1])
+            z = np.cos(new_posi[:,:,2])
 
             dx = np.absolute(x[:,1] - x[:,0])
             dy = np.absolute(y[:,1] - y[:,0])

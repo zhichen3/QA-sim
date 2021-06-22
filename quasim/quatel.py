@@ -50,7 +50,7 @@ class QuaTel:
             pos_t[:,:,1] = (np.pi/2.0)-pos_t[:,:,1]
 
         def pos_carte(posi,ti):
-            # enter time (1D Array) in sec and posi in 2-D array, [[RA1,THETA1],[RA2,THETA2]]
+            # enter time (1D Array) in sec and posi in 2-D array, [[PHI1,THETA1],[PHI2,THETA2]]
             # find source position as function of time due to Earth rotation in cartesian
 
             N = ti.size
@@ -117,8 +117,7 @@ class QuaTel:
         new_pos_t[1] *= pos_t[0,1,2]
 
         #Find the baseline vector in [x,y,z]:
-        B_v = new_pos_t[1] - new_pos_t[0]                                       #(3)
-        #B = np.sqrt(B_v[:,:,0]*B_v[:,:,0] + B_v[:,:,1]*B_v[:,:1] + B_v[:,:,2]*B_v[:,:,2])   
+        B_v = new_pos_t[1] - new_pos_t[0]                                       #(3) 
         B = np.linalg.norm(B_v)
 
         
@@ -144,7 +143,7 @@ class QuaTel:
         s1 = np.tile(s1,(L,1)).T           #(M,N)
         s2 = np.tile(s2,(L,1)).T
         
-        vis = (2.0*s1*s2)/((s1+s2)**2)    #(M,N)
+        vis = (2.0*s1*s2)/((s1+s2)**2)     #(M,N)
         
         N_xy = 1.0/8.0*k_const*(s1+s2)**2
         
@@ -153,19 +152,20 @@ class QuaTel:
 
 
         # let res=0 when sources are out of sight due to rotation.
-        source_theta_rot = coord_rot_theta(new_pos_s,pos_t)     #WANT (M,2,N)
-        cond = np.where(  (np.absolute(source_theta_rot[:,0,:])>(np.pi/2.)) | (np.absolute(source_theta_rot[:,1,:]) > (np.pi/2.)) )
+        # TURN THIS FEATURE OFF FOR NOW
+        #source_theta_rot = coord_rot_theta(new_pos_s,pos_t)     #WANT (M,2,N)
+        #cond = np.where(  (np.absolute(source_theta_rot[:,0,:])>(np.pi/2.)) | (np.absolute(source_theta_rot[:,1,:]) > (np.pi/2.)) )
         
        
         if (type_xy == 'pos'):
             res_pos = N_xy*(1+vis*np.cos(2*np.pi/lam*dot+ph))    #(M,N)
-            res_pos[cond] = 0.0
+            #res_pos[cond] = 0.0
 
             return res_pos, t, B_v
         
         elif (type_xy == 'neg'):             
             res_neg = N_xy*(1-vis*np.cos(2*np.pi/lam*dot+ph))
-            res_neg[cond] = 0.0
+            #res_neg[cond] = 0.0
 
             return res_neg, t, B_v
 
