@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import constants
+import pandas as pd
 
 '''
 -Given location of the two telescope in Earth coordinate
@@ -32,8 +33,11 @@ class QuaTel:
             pos_s = np.array(pos_s)
             pos_s = pos_s.reshape(pos_s.size/6,2,3)     # convert list to 3D array (M,2,3)
         elif isinstance(pos_s, np.ndarray):
-            pos_s = np.delete(pos_s,0,axis=2)             # delete axis that contains star# (M,2,3)
-        
+            try:
+                pos_s = np.delete(pos_s,0,axis=2)       # delete axis that contains star# (M,2,3)
+            except:
+                pos_s = np.delete(pos_s.reshape((1,2,4)),0,axis=2)     #When one pair of star is entered as array
+                
         pos_t = np.array(pos_t).reshape(1,2,3)          # convert to (M,2,3) same as pos_s
         s1 = pos_s[:,0,2]*10.0**(-26)                   # convert Jy to mks unit , M-array
         s2 = pos_s[:,1,2]*10.0**(-26)
@@ -91,7 +95,7 @@ class QuaTel:
             '''
 
             return new_posi
-
+        
         def coord_rot_theta(position_s,position_t):
             # rotate sources to telescope coord around z then y
             # for determining theta in tele coord so res=0 when sources are out of position of tele-plane
@@ -127,7 +131,7 @@ class QuaTel:
         #approximate time interval then break up period into small time intervals
         #assume dt << 1/w_f
 
-        dt = 1.0/w_f_ref
+        dt = 100.0/w_f_ref
 
         L = int(T/dt)
         t = np.linspace(0.0, T, L)
@@ -138,7 +142,7 @@ class QuaTel:
         #Dot product between baseline vector and D_source unit vector
         dot = B_v[0]*D_source[:,:,0]+B_v[1]*D_source[:,:,1]+B_v[2]*D_source[:,:,2]     #(M,N)
         
-        k_const = self.tau*10**(-9)*dt*(self.A*self.BW*10**(9)*lam/constants.h/constants.c)**2
+        k_const = self.tau*10**(-9)*(self.A*self.BW*10**(9)*lam/constants.h/constants.c)**2
 
         s1 = np.tile(s1,(L,1)).T           #(M,N)
         s2 = np.tile(s2,(L,1)).T
@@ -151,28 +155,72 @@ class QuaTel:
         ph = 2.0*np.pi*self.DL/lam
 
 
-        # let res=0 when sources are out of sight due to rotation.
+        # let res=0 when sources are out of sight due to rotation. // Incorrect concept.
         # TURN THIS FEATURE OFF FOR NOW
         #source_theta_rot = coord_rot_theta(new_pos_s,pos_t)     #WANT (M,2,N)
         #cond = np.where(  (np.absolute(source_theta_rot[:,0,:])>(np.pi/2.)) | (np.absolute(source_theta_rot[:,1,:]) > (np.pi/2.)) )
         
        
         if (type_xy == 'pos'):
-            res_pos = N_xy*(1+vis*np.cos(2*np.pi/lam*dot+ph))    #(M,N)
+            res_pos = N_xy*(1+vis*np.cos(2*np.pi/lam*dot+ph))        #(M,N), finds coincidence rate, rather than # of concidence
+            excess = -N_xy*vis*np.cos(np.pi/2 -(2*np.pi/lam*dot+ph)) #term used for finding w(t) for func: freq_func
             #res_pos[cond] = 0.0
 
-            return res_pos, t, B_v
+            return res_pos, t, B_v, excess
         
         elif (type_xy == 'neg'):             
             res_neg = N_xy*(1-vis*np.cos(2*np.pi/lam*dot+ph))
+            excess =  N_xy*vis*np.cos(np.pi/2 -(2*np.pi/lam*dot+ph))
             #res_neg[cond] = 0.0
 
-            return res_neg, t, B_v
+            return res_neg, t, B_v, excess
 
         else:
             raise ValueError("Invalid type")
 
 
 
+    def get_rates(self, res_rate, time):
+    # Calculates the max oscillation frequency, average coincidence rates, and fft
+    # Input needs results from def above.
+        
+    # Find average concidence rates:
+        max_res_rate = np.amax(res_rate, axis=1)
+        min_res_rate = np.amin(res_rate, axis=1)
+        avg_res_rate = (max_res_rate + min_res_rate)/2   #(M)
 
+    # Find frequencies using FFT
+        N = time.size
+        M = len(res_rate)
+    
+        mean = np.tile(avg_res_rate, (N,1)).T                 #(M,N)                 
+        sample_period = time[1]-time[0]
+
+        fft = np.fft.fft(res_rate - mean)                     #(M,N),
+        fft_amp = np.absolute(fft)                            #amplitude spectrum.
+        fft_freq = np.fft.fftfreq(N, d = sample_period)       #(N)
+
+        fft_freq_tile = np.tile(fft_freq, (M,1))
+        ma = np.tile(np.amax(fft_amp, axis=1), (N,1)).T
+        cond = np.where(fft_amp == ma)
+        freq = pd.unique(np.absolute(fft_freq_tile[cond]))
+    
+    
+        return avg_res_rate, fft, fft_freq, freq  #avg_res_rate for M pairs, fft,fft_freq, and peak_freq
+        
+        
+    def freq_func(self, res_rate, time, excess):
+        # Finds (w_t + dw/dt *t)
+        N = len(res_rate)
+
+        dy = np.diff(res_rate,axis=1)          #find dy and dx
+        dx = np.tile(np.diff(time),(N,1))
+
+        # np.diff give N-1 size, so find average of data[i] and data[i+1]
+        excess_new = (excess[:,:-1]+excess[:,1:])/2  
+
+        w_t = (dy/dx/excess_new)/(2*np.pi)
+        new_t = (time[:-1]+time[1:])/2
+
+        return w_t, new_t
         

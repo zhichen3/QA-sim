@@ -41,17 +41,18 @@ class BSC_process:
             lis.append(DEC)
             lis.append(s_V)
             
-        self.pos_s = np.array(lis).reshape((len(lis)/4,4))    #[[star_num1,RA1,DEC1,s_V1],[star_num2,RA2,DEC2,s_V2],...]
+        pos_s = np.array(lis).reshape((len(lis)/4,4))    #[[star_num1,RA1,DEC1,s_V1],[star_num2,RA2,DEC2,s_V2],...]
+        self.pos_s = np.delete(pos_s, 883, axis=0)       # Deletes a duplicate star in the file*
 
 
-
-    def BSC_filter(self,pos_t):
+    def BSC_filter(self,pos_t,obs_t):
         # position of tele (pos_t) in [[RA1,DEC1,R1],[RA2,DEC2,R2]]
+        # obs_t: at what month of the year for observation, set to 21th day. If obs_t = 3, then 3/21
 
         pos_t = np.array(pos_t)
 
         
-        #Select out stars that are never in the plane of tele, diff in DEC less than some deg
+        #Select out stars that are never in the plane of tele, diff in DEC less than some deg 90deg
         cond1 = np.where((np.absolute(self.pos_s[:,2] - pos_t[0,1]) < np.pi/6.) &
                          (np.absolute(self.pos_s[:,2] - pos_t[1,1]) < np.pi/6.))
 
@@ -60,12 +61,22 @@ class BSC_process:
         #flux density condition: eliminate stars whose flux density is less than 50Jy
         cond2 = np.where(pos_s[:,3] > 50.0)
         pos_s = pos_s[cond2]
- 
+
+
+        # Select out stars that can be seen during the night depending on time of year.
+        # Want stars who lags behind the sun at [pi, 5pi/4] during observation periods.
+        # RA defined at 3/21. Just as approxiamtion:
+
+        delay = ((obs_t - 3.0)*30*np.pi/180)
+        cond3 = np.where((np.mod(pos_s[:,1]-delay,2*np.pi)> np.pi) & (np.mod(pos_s[:,1]-delay,2*np.pi) < 5*np.pi/4))
+        pos_s = pos_s[cond3]
+        
+        
         #Create star pairs NxN matrix of all pairs and select out onces in the lower triangle:
         N = len(pos_s)
         row_del = []
 
-        # might want better ways to do this. *Nested for-loop too time consuming.
+        # might want to optimize for big N. *Nested for-loop too time consuming.
         for i in range(N):
             for j in range(i+1):
                 k = i*N+j
@@ -102,7 +113,7 @@ class BSC_process:
             return dis_diff
         
         dis_diff = dis_diff(pos_s_mat)
-        cond3 = np.where(dis_diff < 0.01)     #dis_diff ~ angle in rad for small arc_length
-        pos_s_mat = pos_s_mat[cond3]
-
+        cond4 = np.where(dis_diff < 0.01)     #dis_diff ~ angle in rad for small arc_length
+        pos_s_mat = pos_s_mat[cond4]
+        
         return pos_s_mat
