@@ -74,47 +74,9 @@ class QuaTel:
             new_posi[:,:,:,1] = y
             new_posi[:,:,:,2] = z
 
-            '''
-            x1 = np.sin(posi[0,1])*np.cos(posi[0,0]-self.Omega_E*ti)  #x,y for source 1
-            y1 = np.sin(posi[0,1])*np.sin(posi[0,0]-self.Omega_E*ti)
-
-            x2 = np.sin(posi[1,1])*np.cos(posi[1,0]-self.Omega_E*ti)  #x,y for source 2
-            y2 = np.sin(posi[1,1])*np.sin(posi[1,0]-self.Omega_E*ti)
-
-            x = np.vstack((x1,x2))   #[[[x1t1,x1t2,...],[x2t1,x2t2,...]],...  ]
-            y = np.vstack((y1,y2))   #[[[y1t1,y1t2,...].[y2t1,y2t2,...]],...  ]
-            
-            z1 = np.tile(np.cos(posi[0,1]),N)
-            z2 = np.tile(np.cos(posi[1,1]),N)
-            z = np.vstack((z1,z2))
-
-            new_posi = np.zeros((2,N,3))
-            new_posi[:,:,0] = x
-            new_posi[:,:,1] = y
-            new_posi[:,:,2] = z
-            '''
-
             return new_posi
         
-        def coord_rot_theta(position_s,position_t):
-            # rotate sources to telescope coord around z then y
-            # for determining theta in tele coord so res=0 when sources are out of position of tele-plane
-            # enter position_s after using pos_carte func above
-            # enter position_t in  [[PHI1,THETA1,R1],[PHI2,THETA2,R2]]
-            M = len(position_s)
-            N = position_s[0,0,:,0].size
-            PHI = np.tile(position_t[0,:,0].reshape(1,2,1) , (M,1,N))
-            THETA = np.tile(position_t[0,:,1].reshape(1,2,1), (M,1,N))
-            
-            x_new1 = np.cos(-PHI)*position_s[:,:,:,0] - np.sin(-PHI)*position_s[:,:,:,1]
 
-            z_new = -np.sin(-THETA)*x_new1 + np.cos(-THETA)*position_s[:,:,:,2]
-
-            posi_rot_theta = np.arccos(z_new)                        # Give THETA in new coord (M,2,N)
-
-            return posi_rot_theta
-
-        
         #Find position vector of the two telescope in [x,y,z]
         new_pos_t = pos_carte(pos_t,np.array([0.])).reshape(2,3)                     #(1,2,1,3) -> (2,3)
         new_pos_t[0] *= pos_t[0,0,2]
@@ -131,7 +93,7 @@ class QuaTel:
         #approximate time interval then break up period into small time intervals
         #assume dt << 1/w_f
 
-        dt = 100.0/w_f_ref
+        dt = 10.0/w_f_ref
 
         L = int(T/dt)
         t = np.linspace(0.0, T, L)
@@ -140,7 +102,7 @@ class QuaTel:
         D_source = new_pos_s[:,0,:,:]-new_pos_s[:,1,:,:]   # difference between the two unit vector pointing to sources (M,N,3)
 
         #Dot product between baseline vector and D_source unit vector
-        dot = B_v[0]*D_source[:,:,0]+B_v[1]*D_source[:,:,1]+B_v[2]*D_source[:,:,2]     #(M,N)
+        dot = B_v[0]*D_source[:,:,0] + B_v[1]*D_source[:,:,1] + B_v[2]*D_source[:,:,2]     #(M,N)
         
         k_const = self.tau*10**(-9)*(self.A*self.BW*10**(9)*lam/constants.h/constants.c)**2
 
@@ -155,25 +117,19 @@ class QuaTel:
         ph = 2.0*np.pi*self.DL/lam
 
 
-        # let res=0 when sources are out of sight due to rotation. // Incorrect concept.
-        # TURN THIS FEATURE OFF FOR NOW
-        #source_theta_rot = coord_rot_theta(new_pos_s,pos_t)     #WANT (M,2,N)
-        #cond = np.where(  (np.absolute(source_theta_rot[:,0,:])>(np.pi/2.)) | (np.absolute(source_theta_rot[:,1,:]) > (np.pi/2.)) )
-        
-       
         if (type_xy == 'pos'):
             res_pos = N_xy*(1+vis*np.cos(2*np.pi/lam*dot+ph))        #(M,N), finds coincidence rate, rather than # of concidence
-            excess = -N_xy*vis*np.cos(np.pi/2 -(2*np.pi/lam*dot+ph)) #term used for finding w(t) for func: freq_func
-            #res_pos[cond] = 0.0
+          #  excess = -N_xy*vis*np.cos(np.pi/2 -(2*np.pi/lam*dot+ph)) #term used for finding w(t) for func: freq_func
+            phase = 2*np.pi/lam*dot+ph
 
-            return res_pos, t, B_v, excess
+            return res_pos, t, B_v, phase, D_source
         
         elif (type_xy == 'neg'):             
             res_neg = N_xy*(1-vis*np.cos(2*np.pi/lam*dot+ph))
-            excess =  N_xy*vis*np.cos(np.pi/2 -(2*np.pi/lam*dot+ph))
-            #res_neg[cond] = 0.0
+          #  excess =  N_xy*vis*np.cos(np.pi/2 -(2*np.pi/lam*dot+ph))
+            phase = 2*np.pi/lam*dot+ph
 
-            return res_neg, t, B_v, excess
+            return res_neg, t, B_v, phase
 
         else:
             raise ValueError("Invalid type")
@@ -208,19 +164,17 @@ class QuaTel:
     
         return avg_res_rate, fft, fft_freq, freq  #avg_res_rate for M pairs, fft,fft_freq, and peak_freq
         
-        
-    def freq_func(self, res_rate, time, excess):
-        # Finds (w_t + dw/dt *t)
-        N = len(res_rate)
 
-        dy = np.diff(res_rate,axis=1)          #find dy and dx
-        dx = np.tile(np.diff(time),(N,1))
+    def freq_func(self, phase, time):
+        # find frequency as a function of time by differentiating phase:
+        # phase has shaoe (M,N), for M stars and N time steps
+        M = len(phase)
+        dy = np.diff(phase, axis=1)
+        dx = np.tile(np.diff(time),(M,1))
 
-        # np.diff give N-1 size, so find average of data[i] and data[i+1]
-        excess_new = (excess[:,:-1]+excess[:,1:])/2  
+        f_t = (dy/dx)/(2*np.pi)
+        new_t = (time[:-1] + time[1:])/2
 
-        w_t = (dy/dx/excess_new)/(2*np.pi)
-        new_t = (time[:-1]+time[1:])/2
+        return f_t, new_t
 
-        return w_t, new_t
-        
+    

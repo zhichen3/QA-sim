@@ -48,7 +48,8 @@ class BSC_process:
     def BSC_filter(self,pos_t,obs_t):
         # position of tele (pos_t) in [[RA1,DEC1,R1],[RA2,DEC2,R2]]
         # obs_t: at what month of the year for observation, set to 21th day. If obs_t = 3, then 3/21
-
+        # All conditions can be adjusted accordingly.
+        
         pos_t = np.array(pos_t)
 
         
@@ -67,9 +68,9 @@ class BSC_process:
         # Want stars who lags behind the sun at [pi, 5pi/4] during observation periods.
         # RA defined at 3/21. Just as approxiamtion:
 
-        delay = ((obs_t - 3.0)*30*np.pi/180)
-        cond3 = np.where((np.mod(pos_s[:,1]-delay,2*np.pi)> np.pi) & (np.mod(pos_s[:,1]-delay,2*np.pi) < 5*np.pi/4))
-        pos_s = pos_s[cond3]
+       # delay = ((obs_t - 3.0)*30*np.pi/180)
+       # cond3 = np.where((np.mod(pos_s[:,1]-delay,2*np.pi)> np.pi) & (np.mod(pos_s[:,1]-delay,2*np.pi) < 5*np.pi/4))
+       # pos_s = pos_s[cond3]
         
         
         #Create star pairs NxN matrix of all pairs and select out onces in the lower triangle:
