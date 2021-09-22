@@ -8,7 +8,7 @@ class sim_data:
             ________PARAMETERS___________
         num = pair rate for one star pair, 1D array  
         t = time
-        theo_phase = theoretical phase
+        theo_phase = theoretical phase array
         type_xy = positive correlated channels or anticorrelated channels, enter as 'pos' or 'neg'
         '''
         
@@ -97,19 +97,18 @@ class sim_data:
         # indices for theo_phase ~ pi
         cond = np.delete(cond, cond1)
 
-        # Split array at each pi, we have N arrays each correspond to one cycle
-        phase_split = np.asarray(np.split(self.theo_phase, cond))
-        t_split = np.asarray(np.split(t,cond))
+        # Split array at each pi, we have N arrays, each element corresponds to one cycle
+        phase_split = np.array(np.split(self.theo_phase, cond),dtype=object)
+        t_split = np.array(np.split(t,cond),dtype=object)
 
-
-        #timestamp corresponds to randomly generated phase
+        #timestamp corresponding to randomly generated phase
         self.N = len(phase_split)  # Total number of cycles
         self.cycle_period= np.zeros(self.N)
 
         for i in range(self.N):
             self.cycle_period[i] = abs(t_split[i][0]-t_split[i][-1])
         
-        avg_num = self.avg_rate * self.cycle_period
+        avg_num = self.avg_rate * self.cycle_period   # average number of counts
         self.p = np.random.poisson(avg_num)
         M = np.sum(self.p)     # number of occurences
 
@@ -135,7 +134,7 @@ class sim_data:
         self.sim_num = pdf(self.phase,self.V)*2*np.pi*self.avg_rate
 
 
-        # Outputs theoretical pdf and cdf for visual effects
+        # Outputs theoretical pdf and cdf for visual effects / Irrelevant
         self.x = np.linspace(-np.pi, np.pi, 200)
         self.pdf_value = pdf(self.x,self.V)
         self.cdf_value = cdf(self.x,self.V)

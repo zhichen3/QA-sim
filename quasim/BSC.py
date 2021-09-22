@@ -41,7 +41,8 @@ class BSC_process:
             lis.append(DEC)
             lis.append(s_V)
             
-        pos_s = np.array(lis).reshape((len(lis)/4,4))    #[[star_num1,RA1,DEC1,s_V1],[star_num2,RA2,DEC2,s_V2],...]
+        row_num = int(len(lis)/4)
+        pos_s = np.array(lis).reshape((row_num,4))    #[[star_num1,RA1,DEC1,s_V1],[star_num2,RA2,DEC2,s_V2],...]
         self.pos_s = np.delete(pos_s, 883, axis=0)       # Deletes a duplicate star in the file*
 
 
@@ -68,9 +69,9 @@ class BSC_process:
         # Want stars who lags behind the sun at [pi, 5pi/4] during observation periods.
         # RA defined at 3/21. Just as approxiamtion:
 
-        delay = ((obs_t - 3.0)*30*np.pi/180)
-        cond3 = np.where((np.mod(pos_s[:,1]-delay,2*np.pi)> np.pi) & (np.mod(pos_s[:,1]-delay,2*np.pi) < 5*np.pi/4))
-        pos_s = pos_s[cond3]
+        #delay = ((obs_t - 3.0)*30*np.pi/180)
+        #cond3 = np.where((np.mod(pos_s[:,1]-delay,2*np.pi)> np.pi) & (np.mod(pos_s[:,1]-delay,2*np.pi) < 5*np.pi/4))
+        #pos_s = pos_s[cond3]
         
         
         #Create star pairs NxN matrix of all pairs and select out onces in the lower triangle:
@@ -90,7 +91,8 @@ class BSC_process:
         pos_s_seq = np.delete(pos_s_seq, row_del, axis=0)  #[12345..23456..34567..]
 
         #[ [[num1,RA1,DEC1,S1],[num2,RA2,DEC2,S2]],.....]
-        pos_s_mat = np.hstack((pos_s_seq,pos_s_rep)).reshape((N*(N-1)/2,2,4))
+        ndim = int(N*(N-1)/2)
+        pos_s_mat = np.hstack((pos_s_seq,pos_s_rep)).reshape((ndim,2,4))
 
         # select out pairs of stars that are far away from each other
         # convert from spherical to carte? and find difference.

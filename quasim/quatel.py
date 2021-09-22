@@ -114,20 +114,21 @@ class QuaTel:
         N_xy = 1.0/8.0*k_const*(s1+s2)**2
         
         #phase term due to instrumental length diff
-        ph = 2.0*np.pi*self.DL/lam
+        #self.ph = (2.0*np.pi*self.DL/lam)%(2*np.pi)
+        self.ph = (2.0*np.pi*self.DL/lam + np.pi) % (2 * np.pi) - np.pi    # [-pi,pi]
 
 
         if (type_xy == 'pos'):
-            res_pos = N_xy*(1+vis*np.cos(2*np.pi/lam*dot+ph))        #(M,N), finds coincidence rate, rather than # of concidence
+            res_pos = N_xy*(1+vis*np.cos(2*np.pi/lam*dot+self.ph))        #(M,N), finds coincidence rate, rather than # of concidence
           #  excess = -N_xy*vis*np.cos(np.pi/2 -(2*np.pi/lam*dot+ph)) #term used for finding w(t) for func: freq_func
-            phase = 2*np.pi/lam*dot+ph
+            phase = 2*np.pi/lam*dot+self.ph
 
             return res_pos, t, B_v, phase, D_source
         
         elif (type_xy == 'neg'):             
-            res_neg = N_xy*(1-vis*np.cos(2*np.pi/lam*dot+ph))
+            res_neg = N_xy*(1-vis*np.cos(2*np.pi/lam*dot+self.ph))
           #  excess =  N_xy*vis*np.cos(np.pi/2 -(2*np.pi/lam*dot+ph))
-            phase = 2*np.pi/lam*dot+ph
+            phase = 2*np.pi/lam*dot+self.ph
 
             return res_neg, t, B_v, phase
 
