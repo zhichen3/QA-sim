@@ -11,12 +11,12 @@ import pandas as pd
 class QuaTel:
 
 
-    def __init__(self, N=2, A=1.0, tau=0.15, DL = 0.0):
+    def __init__(self, N=2, A=1.0, tau=0.15, ph = 0.0):
 
         self.N = N                            # Only works for N=2 for now.
         self.A = A                            # collecting Area in meter-squared
         self.tau = tau                        # time bin for correlation in ns
-        self.DL = DL                          # instrumental path length diff
+        self.ph = ph                          # offset phase due to instrumental diff
         self.BW = 1.0/(2.0*np.pi*self.tau)    # Detector Bandwith in GHz
         self.Omega_E = 7.292*10.0**(-5.0)     # Earth Rotation speed (+z) [rad/sec]
                             
@@ -24,9 +24,9 @@ class QuaTel:
     def get_num_photon(self, pos_s, pos_t, lam, T, type_xy):
         # pos_s (source)  enter in 2-D list [[RA1,DEC1,S1],[RA2,DEC2,S2]] in rad and JY
         # or use output of BSC_fil as input for pos_s
-        # pos_t (tele) enter in 2-D list [[RA1,DEC1,R1],[RA2,DEC2,R2]] in rad and meter
+        # pos_t (tele) enter in 2-D list [d_EW,d_NS,L=latitude] in rad and meter
         # lambda in meter
-        # T: period of observation
+        # T: period of observation [T_begin,T_end]
         # type_xy: enter 'pos' for cg,dh and 'neg' for ch,dg
 
         if isinstance(pos_s,list):
@@ -38,21 +38,14 @@ class QuaTel:
             except:
                 pos_s = np.delete(pos_s.reshape((1,2,4)),0,axis=2)     #When one pair of star is entered as array
                 
-        pos_t = np.array(pos_t).reshape(1,2,3)          # convert to (M,2,3) same as pos_s
+        baseline = np.array(pos_t)          
         s1 = pos_s[:,0,2]*10.0**(-26)                   # convert Jy to mks unit , M-array
         s2 = pos_s[:,1,2]*10.0**(-26)
 
+        #change position of sources from declination to theta
+        pos_s[:,:,1] = (np.pi/2.0)-pos_s[:,:,1]    
+
         
-        if (np.absolute(pos_s[:,:,1] - np.tile(pos_t[:,:,1],(len(pos_s),1))) >= (np.pi/2.)).any():
-
-            raise ValueError("At least 1 source out of reach")
-
-        else:
-            
-            #change position of sources from declination to theta
-            pos_s[:,:,1] = (np.pi/2.0)-pos_s[:,:,1]
-            pos_t[:,:,1] = (np.pi/2.0)-pos_t[:,:,1]
-
         def pos_carte(posi,ti):
             # enter time (1D Array) in sec and posi in 2-D array, [[PHI1,THETA1],[PHI2,THETA2]]
             # find source position as function of time due to Earth rotation in cartesian
@@ -77,15 +70,8 @@ class QuaTel:
             return new_posi
         
 
-        #Find position vector of the two telescope in [x,y,z]
-        new_pos_t = pos_carte(pos_t,np.array([0.])).reshape(2,3)                     #(1,2,1,3) -> (2,3)
-        new_pos_t[0] *= pos_t[0,0,2]
-        new_pos_t[1] *= pos_t[0,1,2]
-
-        #Find the baseline vector in [x,y,z]:
-        B_v = new_pos_t[1] - new_pos_t[0]                                       #(3) 
-        B = np.linalg.norm(B_v)
-
+        #Find norm of baseline
+        B = np.sqrt(baseline[0]**2+baseline[1]**2)
         
         # Approximate the fringe rate in order to approximate dt
         w_f_ref= 2.0*np.pi*B*self.Omega_E/lam                                               
@@ -95,14 +81,15 @@ class QuaTel:
 
         dt = 10.0/w_f_ref
 
-        L = int(T/dt)
-        t = np.linspace(0.0, T, L)
+        L = int((abs(T[0])+abs(T[1]))/dt)
+        t = np.linspace(T[0], T[1], L)
 
         new_pos_s = pos_carte(pos_s,t)                     # position vector of two sources in cartesian  (M,2,N,3)
         D_source = new_pos_s[:,0,:,:]-new_pos_s[:,1,:,:]   # difference between the two unit vector pointing to sources (M,N,3)
 
         #Dot product between baseline vector and D_source unit vector
-        dot = B_v[0]*D_source[:,:,0] + B_v[1]*D_source[:,:,1] + B_v[2]*D_source[:,:,2]     #(M,N)
+        dot = -baseline[1]*np.sin(baseline[2])*D_source[:,:,0] + baseline[0]*D_source[:,:,1] \
+              +baseline[1]*np.cos(baseline[2])*D_source[:,:,2]     #(M,N)
         
         k_const = self.tau*10**(-9)*(self.A*self.BW*10**(9)*lam/constants.h/constants.c)**2
 
@@ -110,12 +97,12 @@ class QuaTel:
         s2 = np.tile(s2,(L,1)).T
         
         vis = (2.0*s1*s2)/((s1+s2)**2)     #(M,N)
+        self.vis = vis
         
         N_xy = 1.0/8.0*k_const*(s1+s2)**2
         
         #phase term due to instrumental length diff
-        #self.ph = (2.0*np.pi*self.DL/lam)%(2*np.pi)
-        self.ph = (2.0*np.pi*self.DL/lam + np.pi) % (2 * np.pi) - np.pi    # [-pi,pi]
+        #self.ph = np.mod((self.DL/lam + np.pi),2*np.pi) - np.pi   # [-pi,pi]
 
 
         if (type_xy == 'pos'):
@@ -123,14 +110,14 @@ class QuaTel:
           #  excess = -N_xy*vis*np.cos(np.pi/2 -(2*np.pi/lam*dot+ph)) #term used for finding w(t) for func: freq_func
             phase = 2*np.pi/lam*dot+self.ph
 
-            return res_pos, t, B_v, phase, D_source
+            return res_pos, t, B, phase, D_source
         
         elif (type_xy == 'neg'):             
             res_neg = N_xy*(1-vis*np.cos(2*np.pi/lam*dot+self.ph))
           #  excess =  N_xy*vis*np.cos(np.pi/2 -(2*np.pi/lam*dot+ph))
             phase = 2*np.pi/lam*dot+self.ph
 
-            return res_neg, t, B_v, phase
+            return res_neg, t, B, phase, D_source
 
         else:
             raise ValueError("Invalid type")

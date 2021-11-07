@@ -46,32 +46,35 @@ class BSC_process:
         self.pos_s = np.delete(pos_s, 883, axis=0)       # Deletes a duplicate star in the file*
 
 
-    def BSC_filter(self,pos_t,obs_t):
+    def BSC_filter(self, obs_t):
         # position of tele (pos_t) in [[RA1,DEC1,R1],[RA2,DEC2,R2]]
         # obs_t: at what month of the year for observation, set to 21th day. If obs_t = 3, then 3/21
         # All conditions can be adjusted accordingly.
         
-        pos_t = np.array(pos_t)
+        #pos_t = np.array(pos_t)
 
         
         #Select out stars that are never in the plane of tele, diff in DEC less than some deg 90deg
-        cond1 = np.where((np.absolute(self.pos_s[:,2] - pos_t[0,1]) < np.pi/6.) &
-                         (np.absolute(self.pos_s[:,2] - pos_t[1,1]) < np.pi/6.))
-
+        #cond1 = np.where((np.absolute(self.pos_s[:,2] - pos_t[0,1]) < np.pi/6.) &
+        #                 (np.absolute(self.pos_s[:,2] - pos_t[1,1]) < np.pi/6.))
+        
+        cond1 = np.where(self.pos_s[:,2] > 0 )   # consider stars only in northern hemisphere
+        
         pos_s = self.pos_s[cond1]
 
         #flux density condition: eliminate stars whose flux density is less than 50Jy
-        cond2 = np.where(pos_s[:,3] > 50.0)
+        cond2 = np.where(pos_s[:,3] > 30.0)
         pos_s = pos_s[cond2]
 
 
         # Select out stars that can be seen during the night depending on time of year.
         # Want stars who lags behind the sun at [pi, 5pi/4] during observation periods.
+        # So between 12 hours and 15 hours behind the sun.
         # RA defined at 3/21. Just as approxiamtion:
 
-        #delay = ((obs_t - 3.0)*30*np.pi/180)
-        #cond3 = np.where((np.mod(pos_s[:,1]-delay,2*np.pi)> np.pi) & (np.mod(pos_s[:,1]-delay,2*np.pi) < 5*np.pi/4))
-        #pos_s = pos_s[cond3]
+        delay = ((obs_t - 3.0)*30*np.pi/180)
+        cond3 = np.where((np.mod(pos_s[:,1]-delay,2*np.pi)> np.pi) & (np.mod(pos_s[:,1]-delay,2*np.pi) < 5*np.pi/4))
+        pos_s = pos_s[cond3]
         
         
         #Create star pairs NxN matrix of all pairs and select out onces in the lower triangle:
