@@ -89,7 +89,7 @@ class sim_data:
                 return m_n
 
         #condition to find end point of cycle
-        cond = np.asarray(np.where((num-np.amin(num)) < 0.001*self.avg_rate))
+        cond = np.asarray(np.where((num-np.amin(num)) < 0.00001*self.avg_rate))
 
         #condition to eliminate extra points
         cond1 = np.asarray(np.where(np.diff(cond) == 1))

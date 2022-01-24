@@ -18,8 +18,8 @@ class QuaTel:
         self.tau = tau                        # time bin for correlation in ns
         self.ph = ph                          # offset phase due to instrumental diff
         self.BW = 1.0/(2.0*np.pi*self.tau)    # Detector Bandwith in GHz
-        self.Omega_E = 7.292*10.0**(-5.0)     # Earth Rotation speed (+z) [rad/sec]
-                            
+        self.Omega_E = 7.292e-5               # Earth Rotation speed (+z) [rad/sec]
+                          
         
     def get_num_photon(self, pos_s, pos_t, lam, T, type_xy):
         # pos_s (source)  enter in 2-D list [[RA1,DEC1,S1],[RA2,DEC2,S2]] in rad and JY
@@ -41,31 +41,31 @@ class QuaTel:
         baseline = np.array(pos_t)          
         s1 = pos_s[:,0,2]*10.0**(-26)                   # convert Jy to mks unit , M-array
         s2 = pos_s[:,1,2]*10.0**(-26)
-
-        #change position of sources from declination to theta
-        pos_s[:,:,1] = (np.pi/2.0)-pos_s[:,:,1]    
-
         
-        def pos_carte(posi,ti):
+        def source_pos(posi,ti):
             # enter time (1D Array) in sec and posi in 2-D array, [[PHI1,THETA1],[PHI2,THETA2]]
             # find source position as function of time due to Earth rotation in cartesian
 
             N = ti.size
             M = len(posi)  
-            ti = np.tile(ti,(M,2,1))                                #(M,2,N)
-            PHI =  np.tile(posi[:,:,0].reshape(M,2,1), (1,1,N))     #(M,2,N)
-            THETA = np.tile(posi[:,:,1].reshape(M,2,1), (1,1,N)) 
-
-            new_posi = np.zeros((M,2,N,3))
-            #change from spherical to cartesian
-
-            x = np.sin(THETA)*np.cos(PHI - self.Omega_E*ti)   #[[[x1t1,x1t2,x1t3],[x2t1,x2t2,x2t3]],...] (M,2,N)
-            y = np.sin(THETA)*np.sin(PHI - self.Omega_E*ti)
-            z = np.cos(THETA)     
-
-            new_posi[:,:,:,0] = x
-            new_posi[:,:,:,1] = y
-            new_posi[:,:,:,2] = z
+            ti = np.tile(ti,(M,1))
+            
+            PHI = posi[:,:,0]
+            d_PHI = PHI[:,0]-PHI[:,1]
+            PHI_mid = np.tile((PHI[:,0]+PHI[:,1])/2,(1,N))-self.Omega_E*ti
+            DEC = posi[:,:,1]
+            d_DEC = DEC[:,0]-DEC[:,1]  #M
+            DEC_mid = np.tile((DEC[:,0]+DEC[:,1])/2,(1,N))  #M
+            
+            new_posi = np.zeros((M,N,3))
+            dx = -np.sin(DEC_mid)*np.cos(PHI_mid)*d_DEC-d_PHI*np.cos(DEC_mid)*np.sin(PHI_mid)
+            dy = -np.sin(DEC_mid)*np.sin(PHI_mid)*d_DEC+d_PHI*np.cos(DEC_mid)*np.cos(PHI_mid)
+            dz = d_DEC * np.cos(DEC_mid)
+           
+            
+            new_posi[:,:,0] = dx
+            new_posi[:,:,1] = dy
+            new_posi[:,:,2] = dz
 
             return new_posi
         
@@ -83,10 +83,10 @@ class QuaTel:
 
         L = int((abs(T[0])+abs(T[1]))/dt)
         t = np.linspace(T[0], T[1], L)
-
-        new_pos_s = pos_carte(pos_s,t)                     # position vector of two sources in cartesian  (M,2,N,3)
-        D_source = new_pos_s[:,0,:,:]-new_pos_s[:,1,:,:]   # difference between the two unit vector pointing to sources (M,N,3)
-
+        
+        #new_pos_s = pos_carte(pos_s,t)                     # position vector of two sources in cartesian  (M,2,N,3)
+        #D_source = new_pos_s[:,0,:,:]-new_pos_s[:,1,:,:]   # difference between the two unit vector pointing to sources (M,N,3)
+        D_source = source_pos(pos_s,t)
         #Dot product between baseline vector and D_source unit vector
         dot = -baseline[1]*np.sin(baseline[2])*D_source[:,:,0] + baseline[0]*D_source[:,:,1] \
               +baseline[1]*np.cos(baseline[2])*D_source[:,:,2]     #(M,N)
@@ -101,9 +101,6 @@ class QuaTel:
         
         N_xy = 1.0/8.0*k_const*(s1+s2)**2
         
-        #phase term due to instrumental length diff
-        #self.ph = np.mod((self.DL/lam + np.pi),2*np.pi) - np.pi   # [-pi,pi]
-
 
         if (type_xy == 'pos'):
             res_pos = N_xy*(1+vis*np.cos(2*np.pi/lam*dot+self.ph))        #(M,N), finds coincidence rate, rather than # of concidence
@@ -115,7 +112,7 @@ class QuaTel:
         elif (type_xy == 'neg'):             
             res_neg = N_xy*(1-vis*np.cos(2*np.pi/lam*dot+self.ph))
           #  excess =  N_xy*vis*np.cos(np.pi/2 -(2*np.pi/lam*dot+ph))
-            phase = 2*np.pi/lam*dot+self.ph
+            phase = 2*np.pi/lam*dot-self.ph
 
             return res_neg, t, B, phase, D_source
 

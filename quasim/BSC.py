@@ -31,7 +31,7 @@ class BSC_process:
                 # lam ~ 0.55um, F_v,0 = 3640Jy
                 V_mag = float(line[102:107])               # Convert to flux density
                 s_V = 3640.*10**(V_mag/-2.5)                # flux density in Jy
-                
+                #s_V = 2000.*10**(V_mag/-2.5)
             except ValueError:
                 continue
 
@@ -46,7 +46,7 @@ class BSC_process:
         self.pos_s = np.delete(pos_s, 883, axis=0)       # Deletes a duplicate star in the file*
 
 
-    def BSC_filter(self, obs_t):
+    def BSC_filter(self, obs_t = False, limit = False):
         # position of tele (pos_t) in [[RA1,DEC1,R1],[RA2,DEC2,R2]]
         # obs_t: at what month of the year for observation, set to 21th day. If obs_t = 3, then 3/21
         # All conditions can be adjusted accordingly.
@@ -71,10 +71,10 @@ class BSC_process:
         # Want stars who lags behind the sun at [pi, 5pi/4] during observation periods.
         # So between 12 hours and 15 hours behind the sun.
         # RA defined at 3/21. Just as approxiamtion:
-
-        delay = ((obs_t - 3.0)*30*np.pi/180)
-        cond3 = np.where((np.mod(pos_s[:,1]-delay,2*np.pi)> np.pi) & (np.mod(pos_s[:,1]-delay,2*np.pi) < 5*np.pi/4))
-        pos_s = pos_s[cond3]
+        if obs_t != False:
+            delay = ((obs_t - 3.0)*30*np.pi/180)
+            cond3 = np.where((np.mod(pos_s[:,1]-delay,2*np.pi)> np.pi) & (np.mod(pos_s[:,1]-delay,2*np.pi) < 5*np.pi/4))
+            pos_s = pos_s[cond3]
         
         
         #Create star pairs NxN matrix of all pairs and select out onces in the lower triangle:
@@ -119,7 +119,13 @@ class BSC_process:
             return dis_diff
         
         dis_diff = dis_diff(pos_s_mat)
-        cond4 = np.where(dis_diff < 0.01)     #dis_diff ~ angle in rad for small arc_length
+        
+        if limit == False: 
+            cond4 = np.where(dis_diff < 0.01)           #  Check for star pairs less than 0.01rad separation
+        else:
+            cond4 = np.where(np.logical_and(dis_diff > limit[0],dis_diff < limit[1]))
+        
+        
         pos_s_mat = pos_s_mat[cond4]
         
         return pos_s_mat
