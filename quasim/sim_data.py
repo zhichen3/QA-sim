@@ -58,7 +58,7 @@ class sim_data:
             def pdf(x, V):
                 return (1 - V*np.cos(x))/(2*np.pi)
 
-            def cdf(x,V,avg_rate):
+            def cdf(x, V):
                 return (x+np.pi - V*np.sin(x))/(2*np.pi)
 
 

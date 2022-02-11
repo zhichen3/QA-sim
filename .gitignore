@@ -1,0 +1,7 @@
+*.png
+.ipynb_checkpoints
+__pycache__
+*.paramnames
+*.maxlike
+*.txt
+.gitignore~

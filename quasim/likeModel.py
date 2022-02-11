@@ -8,7 +8,7 @@ import numpy as np
 
 class sim_like(BaseLikelihood):
     
-    def __init__(self, seed, pos_t, pos_s, t, lam):  # seed = [V_init,d_ra_init, d_dec_init]
+    def __init__(self, seed, pos_t, pos_s, lam, t_pos = None, t_neg = None):  # seed = [V_init,d_ra_init, d_dec_init]
         BaseLikelihood.__init__(self,"sim_data")  
         
         # free par
@@ -19,8 +19,10 @@ class sim_like(BaseLikelihood):
         self.offset = seed[3]
         
         # fixed values
-        self.t = t             # timestamp for the sim data
+        self.t_pos = t_pos             # timestamp for the sim data
+        self.t_neg = t_neg
         
+        self.mode = mode
         self.baseline = np.array(pos_t)
         
         pos_s = np.delete(pos_s, 0, axis=1)  # delete star # part.
@@ -32,7 +34,7 @@ class sim_like(BaseLikelihood):
     def freeParameters(self):
         return [
                 Parameter("V", self.seed[0], err=0.04,bounds=(0.0,1.0)),    #0.1 for 1arcsec ,bounds=(-0.1,0.7)
-                Parameter("d_ew",self.seed[1], err=3e-10),   #5e-10
+                Parameter("d_ew",self.seed[1], err=5e-10),   #5e-10
                 Parameter("d_ns",self.seed[2], err=5e-10),
                 Parameter("offset",self.seed[3], err=np.pi/10,bounds=(-np.pi/2,np.pi/2))   #bounds=(-np.pi,np.pi)
                 ]
@@ -58,32 +60,66 @@ class sim_like(BaseLikelihood):
         DEC = self.pos_s[:,1]
         DEC_mid = np.tile((DEC[0]+DEC[1])/2,(N))  
             
-        dx = -np.sin(DEC_mid)*np.cos(PHI_mid)*self.d_ns-self.d_ew*np.sin(PHI_mid)
-        dy = -np.sin(DEC_mid)*np.sin(PHI_mid)*self.d_ns+self.d_ew*np.cos(PHI_mid)
-        dz = self.d_ns*np.cos(DEC_mid)
-           
+        dx = -np.sin(DEC_mid)*np.cos(PHI_mid)*self.d_ns - self.d_ew*np.sin(PHI_mid)
+        dy = -np.sin(DEC_mid)*np.sin(PHI_mid)*self.d_ns + self.d_ew*np.cos(PHI_mid)
+        dz = self.d_ns * np.cos(DEC_mid)
+        
         new_posi = np.column_stack((dx,dy,dz))
         
         return new_posi
 
     
     
-    def get_phase(self):      
-        new_pos_s = self.source_pos(self.t)
-        
-        dot = -self.baseline[1]*np.sin(self.baseline[2])*new_pos_s[:,0] + self.baseline[0]*new_pos_s[:,1] \
-              +self.baseline[1]*np.cos(self.baseline[2])*new_pos_s[:,2]
+    def get_phase(self):
+        if self.t_pos != None:
+            new_pos_s = self.source_pos(self.t_pos)
+            dot = -self.baseline[1]*np.sin(self.baseline[2])*new_pos_s[:,0] \
+               + self.baseline[0] *new_pos_s[:,1] \
+               +self.baseline[1]*np.cos(self.baseline[2])*new_pos_s[:,2]
        
-        phase = 2*np.pi/self.lam*dot + self.offset   # Total phase with the offset
+            phase_pos = 2*np.pi/self.lam*dot + self.offset   # Total phase with the offset for plus mode
+            
         
-        return phase
+        if self.t_neg != None:
+            new_pos_s = self.source_pos(self.t_neg)
+            
+            dot = -self.baseline[1]*np.sin(self.baseline[2])*new_pos_s[:,0] \
+               + self.baseline[0] *new_pos_s[:,1] \
+               +self.baseline[1]*np.cos(self.baseline[2])*new_pos_s[:,2]
+       
+            phase_neg = 2*np.pi/self.lam*dot + self.offset   # Total phase with the offset for plus mode
+                        
+        
+        if (self.t_neg == None and self.t_pos != None):
+            
+            return phase_pos
+        
+        elif (self.t_neg != None and self.t_pos == None):
+            
+            return phase_neg
+        
+        else:
+            
+            return np.column_stack((phase_pos,phase_neg))
+        
     
     
     def loglike_wprior(self):
-        
         phase = self.get_phase()
-        loglike = np.log(1+self.V*np.cos(phase))  #get loglike for diff phase in 2d array[[],[],[
+        
+        if (self.t_neg == None and self.t_pos != None):
+
+            loglike = np.log(1+self.V*np.cos(phase))  #get loglike for diff phase in 2d array[[],[],[
+       
+        elif self.mode == 'neg':
+            
+            loglike = np.log(1-self.V*np.cos(phase))
+        
+        elif self.mode == 'mix':
+            
+            loglike = np.log(1+self.V*np.cos(phase[0])) + np.log(1-self.V*np.cos(phase[1]))
+
         
         res = np.sum(loglike, axis=None)
-        #print(self.baseline[0])
+        
         return res

@@ -58,8 +58,8 @@ class QuaTel:
             DEC_mid = np.tile((DEC[:,0]+DEC[:,1])/2,(1,N))  #M
             
             new_posi = np.zeros((M,N,3))
-            dx = -np.sin(DEC_mid)*np.cos(PHI_mid)*d_DEC-d_PHI*np.cos(DEC_mid)*np.sin(PHI_mid)
-            dy = -np.sin(DEC_mid)*np.sin(PHI_mid)*d_DEC+d_PHI*np.cos(DEC_mid)*np.cos(PHI_mid)
+            dx = -np.sin(DEC_mid)*np.cos(PHI_mid)*d_DEC - d_PHI*np.cos(DEC_mid)*np.sin(PHI_mid)
+            dy = -np.sin(DEC_mid)*np.sin(PHI_mid)*d_DEC + d_PHI*np.cos(DEC_mid)*np.cos(PHI_mid)
             dz = d_DEC * np.cos(DEC_mid)
            
             
@@ -91,12 +91,13 @@ class QuaTel:
         dot = -baseline[1]*np.sin(baseline[2])*D_source[:,:,0] + baseline[0]*D_source[:,:,1] \
               +baseline[1]*np.cos(baseline[2])*D_source[:,:,2]     #(M,N)
         
-        k_const = self.tau*10**(-9)*(self.A*self.BW*10**(9)*lam/constants.h/constants.c)**2
+        k_const = self.tau*10**(-9)*(self.A*self.BW*10**(9)*lam/constants.h/constants.c/2.0)**2
 
         s1 = np.tile(s1,(L,1)).T           #(M,N)
         s2 = np.tile(s2,(L,1)).T
         
-        vis = (2.0*s1*s2)/((s1+s2)**2)     #(M,N)
+        vis = (2.0*s1*s2)/((s1+s2)**2+s1**2+s2**2)     #(M,N)
+        #vis = (2.0*s1*s2)/(s1+s2)**2
         self.vis = vis
         
         N_xy = 1.0/8.0*k_const*(s1+s2)**2
@@ -107,14 +108,14 @@ class QuaTel:
           #  excess = -N_xy*vis*np.cos(np.pi/2 -(2*np.pi/lam*dot+ph)) #term used for finding w(t) for func: freq_func
             phase = 2*np.pi/lam*dot+self.ph
 
-            return res_pos, t, B, phase, D_source
+            return res_pos, t, phase
         
         elif (type_xy == 'neg'):             
             res_neg = N_xy*(1-vis*np.cos(2*np.pi/lam*dot+self.ph))
           #  excess =  N_xy*vis*np.cos(np.pi/2 -(2*np.pi/lam*dot+ph))
-            phase = 2*np.pi/lam*dot-self.ph
+            phase = 2*np.pi/lam*dot+self.ph
 
-            return res_neg, t, B, phase, D_source
+            return res_neg, t, phase
 
         else:
             raise ValueError("Invalid type")
