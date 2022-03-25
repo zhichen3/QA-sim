@@ -46,7 +46,7 @@ class BSC_process:
         self.pos_s = np.delete(pos_s, 883, axis=0)       # Deletes a duplicate star in the file*
 
 
-    def BSC_filter(self, obs_t = False, limit = False):
+    def BSC_filter(self, obs_t = None, limit = None):
         # position of tele (pos_t) in [[RA1,DEC1,R1],[RA2,DEC2,R2]]
         # obs_t: at what month of the year for observation, set to 21th day. If obs_t = 3, then 3/21
         # All conditions can be adjusted accordingly.
@@ -69,11 +69,11 @@ class BSC_process:
 
         # Select out stars that can be seen during the night depending on time of year.
         # Want stars who lags behind the sun at [pi, 5pi/4] during observation periods.
-        # So between 12 hours and 15 hours behind the sun.
+        # So between 12 hours and 16 hours behind the sun.
         # RA defined at 3/21. Just as approxiamtion:
-        if obs_t != False:
+        if obs_t is not None:
             delay = ((obs_t - 3.0)*30*np.pi/180)
-            cond3 = np.where((np.mod(pos_s[:,1]-delay,2*np.pi)> np.pi) & (np.mod(pos_s[:,1]-delay,2*np.pi) < 5*np.pi/4))
+            cond3 = np.where((np.mod(pos_s[:,1]-delay,2*np.pi)> np.pi) & (np.mod(pos_s[:,1]-delay,2*np.pi) < 5.7*np.pi/4))
             pos_s = pos_s[cond3]
         
         
@@ -120,7 +120,7 @@ class BSC_process:
         
         dis_diff = dis_diff(pos_s_mat)
         
-        if limit == False: 
+        if limit is None: 
             cond4 = np.where(dis_diff < 0.01)           #  Check for star pairs less than 0.01rad separation
         else:
             cond4 = np.where(np.logical_and(dis_diff > limit[0],dis_diff < limit[1]))
@@ -128,4 +128,8 @@ class BSC_process:
         
         pos_s_mat = pos_s_mat[cond4]
         
+        if obs_t is not None:
+            cond5 = np.where(pos_s_mat[:,0,3]+pos_s_mat[:,1,3] == np.amax(np.sum(pos_s_mat[:,:,3],axis=1)))
+            pos_s_mat = pos_s_mat[cond5]
+            
         return pos_s_mat

@@ -22,7 +22,6 @@ class sim_like(BaseLikelihood):
         self.t_pos = t_pos             # timestamp for the sim data
         self.t_neg = t_neg
         
-        self.mode = mode
         self.baseline = np.array(pos_t)
         
         pos_s = np.delete(pos_s, 0, axis=1)  # delete star # part.
@@ -34,9 +33,9 @@ class sim_like(BaseLikelihood):
     def freeParameters(self):
         return [
                 Parameter("V", self.seed[0], err=0.04,bounds=(0.0,1.0)),    #0.1 for 1arcsec ,bounds=(-0.1,0.7)
-                Parameter("d_ew",self.seed[1], err=5e-10),   #5e-10
-                Parameter("d_ns",self.seed[2], err=5e-10),
-                Parameter("offset",self.seed[3], err=np.pi/10,bounds=(-np.pi/2,np.pi/2))   #bounds=(-np.pi,np.pi)
+                Parameter("d_ew",self.seed[1], err=3e-10,),   #5e-10
+                Parameter("d_ns",self.seed[2], err=5e-10,),
+                Parameter("offset",self.seed[3], err=np.pi/6,bounds=(-np.pi,np.pi))   #bounds=(-np.pi,np.pi)
                 ]
     
     def updateParams(self,params):    #params is also a class, updates param value.
@@ -71,7 +70,7 @@ class sim_like(BaseLikelihood):
     
     
     def get_phase(self):
-        if self.t_pos != None:
+        if self.t_pos is not None:
             new_pos_s = self.source_pos(self.t_pos)
             dot = -self.baseline[1]*np.sin(self.baseline[2])*new_pos_s[:,0] \
                + self.baseline[0] *new_pos_s[:,1] \
@@ -80,7 +79,7 @@ class sim_like(BaseLikelihood):
             phase_pos = 2*np.pi/self.lam*dot + self.offset   # Total phase with the offset for plus mode
             
         
-        if self.t_neg != None:
+        if self.t_neg is not None:
             new_pos_s = self.source_pos(self.t_neg)
             
             dot = -self.baseline[1]*np.sin(self.baseline[2])*new_pos_s[:,0] \
@@ -90,36 +89,36 @@ class sim_like(BaseLikelihood):
             phase_neg = 2*np.pi/self.lam*dot + self.offset   # Total phase with the offset for plus mode
                         
         
-        if (self.t_neg == None and self.t_pos != None):
+        if (self.t_neg is None and self.t_pos is not None):
             
             return phase_pos
         
-        elif (self.t_neg != None and self.t_pos == None):
+        elif (self.t_neg is not None and self.t_pos is None):
             
             return phase_neg
         
         else:
             
-            return np.column_stack((phase_pos,phase_neg))
+            return [phase_pos,phase_neg]
         
     
     
     def loglike_wprior(self):
         phase = self.get_phase()
         
-        if (self.t_neg == None and self.t_pos != None):
-
-            loglike = np.log(1+self.V*np.cos(phase))  #get loglike for diff phase in 2d array[[],[],[
-       
-        elif self.mode == 'neg':
+        if (self.t_neg is None and self.t_pos is not None):
+           
+            res = np.sum(np.log(1+self.V*np.cos(phase)) , axis=None)
             
-            loglike = np.log(1-self.V*np.cos(phase))
+        elif (self.t_neg is not None and self.t_pos is None):
+  
+            res = np.sum(np.log(1-self.V*np.cos(phase)), axis=None)
         
-        elif self.mode == 'mix':
-            
-            loglike = np.log(1+self.V*np.cos(phase[0])) + np.log(1-self.V*np.cos(phase[1]))
+        else:
 
+            res = np.sum(np.log(1+self.V*np.cos(phase[0])), axis=None) \
+                    + np.sum(np.log(1-self.V*np.cos(phase[1])), axis=None)
+            
         
-        res = np.sum(loglike, axis=None)
         
         return res

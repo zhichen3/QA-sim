@@ -5,3 +5,5 @@ __pycache__
 *.maxlike
 *.txt
 .gitignore~
+PaperFigs.ipynb
+MCMC_figures

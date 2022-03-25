@@ -61,7 +61,8 @@ class QuaTel:
             dx = -np.sin(DEC_mid)*np.cos(PHI_mid)*d_DEC - d_PHI*np.cos(DEC_mid)*np.sin(PHI_mid)
             dy = -np.sin(DEC_mid)*np.sin(PHI_mid)*d_DEC + d_PHI*np.cos(DEC_mid)*np.cos(PHI_mid)
             dz = d_DEC * np.cos(DEC_mid)
-           
+              
+            
             
             new_posi[:,:,0] = dx
             new_posi[:,:,1] = dy
@@ -79,7 +80,7 @@ class QuaTel:
         #approximate time interval then break up period into small time intervals
         #assume dt << 1/w_f
 
-        dt = 10.0/w_f_ref
+        dt = 15.0/w_f_ref
 
         L = int((abs(T[0])+abs(T[1]))/dt)
         t = np.linspace(T[0], T[1], L)
