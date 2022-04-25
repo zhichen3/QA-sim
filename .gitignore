@@ -8,3 +8,4 @@ __pycache__
 PaperFigs.ipynb
 MCMC_figures
 output/*.jpg
+quasim.egg-info
