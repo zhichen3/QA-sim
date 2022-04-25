@@ -8,4 +8,5 @@ MCMC.ipynb provides a Jupyter Notebook file for star pair filtration based on th
 
 MCMC.ipynb uses MCMC code provided from anze slosar, see slosar/april for more detail.
 
-
+To install quasim on local machine, run:
+python setup.py install
