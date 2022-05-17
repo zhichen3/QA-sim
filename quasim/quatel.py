@@ -19,7 +19,7 @@ class QuaTel:
         self.ph = ph                          # offset phase due to instrumental diff
         self.BW = 1.0/(2.0*np.pi*self.tau)    # Detector Bandwith in GHz
         self.Omega_E = 7.292e-5               # Earth Rotation speed (+z) [rad/sec]
-                          
+              
         
     def get_num_photon(self, pos_s, pos_t, lam, T, type_xy):
         # pos_s (source)  enter in 2-D list [[RA1,DEC1,S1],[RA2,DEC2,S2]] in rad and JY
@@ -92,7 +92,7 @@ class QuaTel:
         dot = -baseline[1]*np.sin(baseline[2])*D_source[:,:,0] + baseline[0]*D_source[:,:,1] \
               +baseline[1]*np.cos(baseline[2])*D_source[:,:,2]     #(M,N)
         
-        k_const = self.tau*10**(-9)*(self.A*self.BW*10**(9)*lam/constants.h/constants.c/2.0)**2
+        k_const = self.tau*1.0e-9*(self.A*self.BW*1.0e9*lam/constants.h/constants.c/2.0)**2
 
         s1 = np.tile(s1,(L,1)).T           #(M,N)
         s2 = np.tile(s2,(L,1)).T
@@ -104,15 +104,17 @@ class QuaTel:
         N_xy = 1.0/8.0*k_const*(s1+s2)**2
         
 
+        # Multiply by 2 to take care of the fact that there are two channels for + and - modes.
         if (type_xy == 'pos'):
-            res_pos = N_xy*(1+vis*np.cos(2*np.pi/lam*dot+self.ph))        #(M,N), finds coincidence rate, rather than # of concidence
+            
+            res_pos = 2.0*N_xy*(1+vis*np.cos(2*np.pi/lam*dot+self.ph))        #(M,N), finds coincidence rate, rather than # of concidence
           #  excess = -N_xy*vis*np.cos(np.pi/2 -(2*np.pi/lam*dot+ph)) #term used for finding w(t) for func: freq_func
             phase = 2*np.pi/lam*dot+self.ph
 
             return res_pos, t, phase
         
         elif (type_xy == 'neg'):             
-            res_neg = N_xy*(1-vis*np.cos(2*np.pi/lam*dot+self.ph))
+            res_neg = 2.0*N_xy*(1-vis*np.cos(2*np.pi/lam*dot+self.ph))
           #  excess =  N_xy*vis*np.cos(np.pi/2 -(2*np.pi/lam*dot+ph))
             phase = 2*np.pi/lam*dot+self.ph
 
