@@ -1,4 +1,5 @@
 from .quatel import QuaTel
 from .BSC import BSC_process
 from .sim_data import sim_data
-from .likeModel import sim_like
+from .sim_likelihood import sim_like
+from .plot_triangle import plot_triangle

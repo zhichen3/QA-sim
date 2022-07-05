@@ -1,0 +1,3 @@
+[submodule "external/april"]
+	path = external/april
+	url = git@github.com:slosar/april.git

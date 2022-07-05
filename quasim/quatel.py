@@ -39,8 +39,8 @@ class QuaTel:
                 pos_s = np.delete(pos_s.reshape((1,2,4)),0,axis=2)     #When one pair of star is entered as array
                 
         baseline = np.array(pos_t)          
-        s1 = pos_s[:,0,2]*10.0**(-26)                   # convert Jy to mks unit , M-array
-        s2 = pos_s[:,1,2]*10.0**(-26)
+        s1 = pos_s[:,0,2]*1.0e-26                   # convert Jy to mks unit , M-array
+        s2 = pos_s[:,1,2]*1.0e-26
         
         def source_pos(posi,ti):
             # enter time (1D Array) in sec and posi in 2-D array, [[PHI1,THETA1],[PHI2,THETA2]]
@@ -92,7 +92,11 @@ class QuaTel:
         dot = -baseline[1]*np.sin(baseline[2])*D_source[:,:,0] + baseline[0]*D_source[:,:,1] \
               +baseline[1]*np.cos(baseline[2])*D_source[:,:,2]     #(M,N)
         
+<<<<<<< HEAD
         k_const = self.tau*1.0e-9*(self.A*self.BW*1.0e9*lam/constants.h/constants.c/2.0)**2
+=======
+        k_const = self.tau*(1.0e-9)*(self.A*self.BW*(1.0e9)*lam/constants.h/constants.c/2.0)**2
+>>>>>>> 3ff0ca0ec140410da1853856a8a1460842aee92e
 
         s1 = np.tile(s1,(L,1)).T           #(M,N)
         s2 = np.tile(s2,(L,1)).T
@@ -103,8 +107,12 @@ class QuaTel:
         
         N_xy = 1.0/8.0*k_const*(s1+s2)**2
         
+<<<<<<< HEAD
 
         # Multiply by 2 to take care of the fact that there are two channels for + and - modes.
+=======
+        # Multiply by 2 to consider there are two pairs for each mode
+>>>>>>> 3ff0ca0ec140410da1853856a8a1460842aee92e
         if (type_xy == 'pos'):
             
             res_pos = 2.0*N_xy*(1+vis*np.cos(2*np.pi/lam*dot+self.ph))        #(M,N), finds coincidence rate, rather than # of concidence
@@ -123,7 +131,32 @@ class QuaTel:
         else:
             raise ValueError("Invalid type")
 
+    def get_theo_par(self, source):
+        """ 
+        Take source in a list: [[ra1,dec1,flux_density1],[ra2,dec2,flux_density2]] or results from the BSC.BSC_filter()
+        Returns the theoretical parameter in [vis,d_ew,d_ns] and separation between two sources
+        """
+        if len(source[0]) == 4:
+            source = np.delete(source, 0 , axis=1)
+        s1 = source[0,2]
+        s2 = source[1,2]
+        vis = (2.0*s1*s2)/((s1+s2)**2+s1**2+s2**2)
+        d_ns_theo = source[0,1]-source[1,1]
+        d_ew_theo = np.cos((source[0,1]+source[1,1])/2)*(source[0,0]-source[1,0])
+        theo_par = np.array([vis, d_ew_theo, d_ns_theo, self.ph])
+        
+        DEC_mid = (source[0,1]+source[1,1])/2.0
+        PHI_mid = (source[0,0]+source[1,0])/2.0
+        d_DEC = source[0,1]-source[1,1] 
+        d_PHI = source[0,0]-source[1,0]
+        # Find theoretical separation
+        dx = -np.sin(DEC_mid)*np.cos(PHI_mid)*d_DEC - d_PHI*np.cos(DEC_mid)*np.sin(PHI_mid)
+        dy = -np.sin(DEC_mid)*np.sin(PHI_mid)*d_DEC + d_PHI*np.cos(DEC_mid)*np.cos(PHI_mid)
+        dz = d_DEC * np.cos(DEC_mid)
+        
+        theo_d = np.sqrt(dx**2+dy**2+dz**2)
 
+        return theo_par,theo_d
 
     def get_rates(self, res_rate, time):
     # Calculates the max oscillation frequency, average coincidence rates, and fft
@@ -165,5 +198,3 @@ class QuaTel:
         new_t = (time[:-1] + time[1:])/2
 
         return f_t, new_t
-
-    
