@@ -5,6 +5,7 @@ class sim_data:
 
     def __init__(self, num, t, theo_phase, type_xy):
         '''
+        This is a data point sampler given the pair rate as a function of time, theoretical phase and type of correlation.
             ________PARAMETERS___________
         num = pair rate for one star pair, 1D array  
         t = time
@@ -138,7 +139,4 @@ class sim_data:
         self.x = np.linspace(-np.pi, np.pi, 200)
         self.pdf_value = pdf(self.x,self.V)
         self.cdf_value = cdf(self.x,self.V)
-
-
-
 

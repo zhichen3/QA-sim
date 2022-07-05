@@ -122,7 +122,32 @@ class QuaTel:
         else:
             raise ValueError("Invalid type")
 
+    def get_theo_par(self, source):
+        """ 
+        Take source in a list: [[ra1,dec1,flux_density1],[ra2,dec2,flux_density2]] or results from the BSC.BSC_filter()
+        Returns the theoretical parameter in [vis,d_ew,d_ns] and separation between two sources
+        """
+        if len(source[0]) == 4:
+            source = np.delete(source, 0 , axis=1)
+        s1 = source[0,2]
+        s2 = source[1,2]
+        vis = (2.0*s1*s2)/((s1+s2)**2+s1**2+s2**2)
+        d_ns_theo = source[0,1]-source[1,1]
+        d_ew_theo = np.cos((source[0,1]+source[1,1])/2)*(source[0,0]-source[1,0])
+        theo_par = np.array([vis, d_ew_theo, d_ns_theo, self.ph])
+        
+        DEC_mid = (source[0,1]+source[1,1])/2.0
+        PHI_mid = (source[0,0]+source[1,0])/2.0
+        d_DEC = source[0,1]-source[1,1] 
+        d_PHI = source[0,0]-source[1,0]
+        # Find theoretical separation
+        dx = -np.sin(DEC_mid)*np.cos(PHI_mid)*d_DEC - d_PHI*np.cos(DEC_mid)*np.sin(PHI_mid)
+        dy = -np.sin(DEC_mid)*np.sin(PHI_mid)*d_DEC + d_PHI*np.cos(DEC_mid)*np.cos(PHI_mid)
+        dz = d_DEC * np.cos(DEC_mid)
+        
+        theo_d = np.sqrt(dx**2+dy**2+dz**2)
 
+        return theo_par,theo_d
 
     def get_rates(self, res_rate, time):
     # Calculates the max oscillation frequency, average coincidence rates, and fft
