@@ -189,5 +189,3 @@ class QuaTel:
         new_t = (time[:-1] + time[1:])/2
 
         return f_t, new_t
-
-    
