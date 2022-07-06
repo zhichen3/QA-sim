@@ -3,7 +3,16 @@ import numpy as np
 import copy
 
 """
-Object for printing 
+Object for plotting
+Parameters
+-------------------
+fname: string of input file
+theo_par: theoretical parameters, get from QuaTel.get_theo_par()
+obs_duration: observation duration in secs
+avg_rate: average pair rate
+n_cycle: number of cycles, enter only number of cycles for one mode, no matter used both positive and negative mode.
+output_file: string of the output file
+single_mode: Whether the simulated data used a single positive or negative mode, or two modes combined.  
 """
 class plot_triangle:
     def __init__(self, fname, theo_par, obs_duration, avg_rate, n_cycle, output_file="output_data.jpg", single_mode=False):
@@ -43,11 +52,10 @@ class plot_triangle:
         mcmc_data[:,1] = (mcmc_data[:,1] - d_ew_mid)/4.8481368e-9
         mcmc_data[:,2] = (mcmc_data[:,2] - d_ns_mid)/4.8481368e-9
 
-        self.theo_par_mod = []
-        self.theo_par_mod.append(self.theo_par[0])
-        self.theo_par_mod.append((self.theo_par[1] - d_ew_mid)/4.8481368e-9)
-        self.theo_par_mod.append((self.theo_par[2] - d_ns_mid)/4.8481368e-9)
-        self.theo_par_mod.append(self.theo_par[3])
+        self.theo_par_mod = copy.deepcopy(self.theo_par[:])
+        self.theo_par_mod[1] = (self.theo_par[1] - d_ew_mid)/4.8481368e-9
+        self.theo_par_mod[2] = (self.theo_par[2] - d_ns_mid)/4.8481368e-9
+
         
         figure = corner.corner(mcmc_data,labels=['Visbility','Δd_E [mas]','Δd_N [mas]','offset_phase [rad]'],quantiles=(0.023, 0.16, 0.5, 0.84,0.977),levels=(0.68,0.952,0.994))
         corner.overplot_points(figure, np.array(list(self.theo_par_mod))[None], marker="s", color="C1",label="Theo")

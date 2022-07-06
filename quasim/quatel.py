@@ -10,7 +10,6 @@ import pandas as pd
 
 class QuaTel:
 
-
     def __init__(self, N=2, A=1.0, tau=0.15, ph = 0.0):
 
         self.N = N                            # Only works for N=2 for now.
@@ -61,16 +60,13 @@ class QuaTel:
             dx = -np.sin(DEC_mid)*np.cos(PHI_mid)*d_DEC - d_PHI*np.cos(DEC_mid)*np.sin(PHI_mid)
             dy = -np.sin(DEC_mid)*np.sin(PHI_mid)*d_DEC + d_PHI*np.cos(DEC_mid)*np.cos(PHI_mid)
             dz = d_DEC * np.cos(DEC_mid)
-              
-            
-            
+                          
             new_posi[:,:,0] = dx
             new_posi[:,:,1] = dy
             new_posi[:,:,2] = dz
 
             return new_posi
         
-
         #Find norm of baseline
         B = np.sqrt(baseline[0]**2+baseline[1]**2)
         
@@ -92,11 +88,8 @@ class QuaTel:
         dot = -baseline[1]*np.sin(baseline[2])*D_source[:,:,0] + baseline[0]*D_source[:,:,1] \
               +baseline[1]*np.cos(baseline[2])*D_source[:,:,2]     #(M,N)
         
-<<<<<<< HEAD
-        k_const = self.tau*1.0e-9*(self.A*self.BW*1.0e9*lam/constants.h/constants.c/2.0)**2
-=======
         k_const = self.tau*(1.0e-9)*(self.A*self.BW*(1.0e9)*lam/constants.h/constants.c/2.0)**2
->>>>>>> 3ff0ca0ec140410da1853856a8a1460842aee92e
+
 
         s1 = np.tile(s1,(L,1)).T           #(M,N)
         s2 = np.tile(s2,(L,1)).T
@@ -106,13 +99,8 @@ class QuaTel:
         self.vis = vis
         
         N_xy = 1.0/8.0*k_const*(s1+s2)**2
-        
-<<<<<<< HEAD
-
+    
         # Multiply by 2 to take care of the fact that there are two channels for + and - modes.
-=======
-        # Multiply by 2 to consider there are two pairs for each mode
->>>>>>> 3ff0ca0ec140410da1853856a8a1460842aee92e
         if (type_xy == 'pos'):
             
             res_pos = 2.0*N_xy*(1+vis*np.cos(2*np.pi/lam*dot+self.ph))        #(M,N), finds coincidence rate, rather than # of concidence
@@ -182,11 +170,9 @@ class QuaTel:
         ma = np.tile(np.amax(fft_amp, axis=1), (N,1)).T
         cond = np.where(fft_amp == ma)
         freq = pd.unique(np.absolute(fft_freq_tile[cond]))
-    
-    
+
         return avg_res_rate, fft, fft_freq, freq  #avg_res_rate for M pairs, fft,fft_freq, and peak_freq
         
-
     def freq_func(self, phase, time):
         # find frequency as a function of time by differentiating phase:
         # phase has shaoe (M,N), for M stars and N time steps
