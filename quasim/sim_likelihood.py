@@ -17,7 +17,7 @@ pos_s: position of the source in list, takes result from the either BSC.BSC_filt
 lam: wavelength of observation
 t_pos: time stamp of positive mode data
 t_neg: time stamp of negative mode data
-err: list of errors for the four parameter: [err_vis, err_ew, err_ns, err_phase]
+err: list of errors for the four parameter: [err_vis, err_ew, err_ns, err_phase] Adjust error in order to get nice fits.
 """
 
 class sim_like(BaseLikelihood):    
@@ -38,9 +38,15 @@ class sim_like(BaseLikelihood):
         self.baseline = np.array(pos_t)
 
         if len(pos_s[0]) == 4:
+<<<<<<< HEAD
             self.pos_s = np.delete(pos_s, 0, axis=1)  # delete star # part.
         else:
             self.pos_s = pos_s     # position of sources to determine midpoint
+=======
+            pos_s = np.delete(pos_s, 0, axis=1)  # delete star # part.
+
+        self.pos_s = pos_s     # position of sources to determine midpoint
+>>>>>>> 026d93809408fd4cc58256d022ae3e4c73167237
         
         self.lam = lam         # lambda for observation
         self.Omega_E = 7.292e-5

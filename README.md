@@ -11,3 +11,4 @@ MCMC.ipynb uses MCMC code provided from anze slosar, see slosar/april for more d
 To install quasim on local machine, run:
 
 python setup.py install
+git submodule update --init --recursive
