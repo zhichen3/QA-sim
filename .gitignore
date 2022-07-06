@@ -10,3 +10,4 @@ MCMC_figures
 output/*.jpg
 quasim.egg-info
 *~
+*.jpg
