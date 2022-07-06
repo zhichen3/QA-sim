@@ -48,10 +48,10 @@ class sim_like(BaseLikelihood):
     def freeParameters(self):
     # Adjust err or bounds accordingly for constrained triangle plots
         return [
-                Parameter("V", self.seed[0], err=0.04,bounds=(0.0,1.0)),    #0.1 for 1arcsec ,bounds=(-0.1,0.7)
-                Parameter("d_ew",self.seed[1], err=5e-10,),   #5e-10
-                Parameter("d_ns",self.seed[2], err=15e-10,),   #12e-10 for 1arcsec, 5e-10 for 15arcsec
-                Parameter("offset",self.seed[3], err=np.pi/10,bounds=(-np.pi,np.pi)),   #bounds=(-np.pi,np.pi)
+                Parameter("V", self.seed[0], err=self.err[0],bounds=(0.0,1.0)),    #0.1 for 1arcsec ,bounds=(-0.1,0.7)
+                Parameter("d_ew",self.seed[1], err=self.err[1],),   #5e-10
+                Parameter("d_ns",self.seed[2], err=self.err[2],),   #12e-10 for 1arcsec, 5e-10 for 15arcsec
+                Parameter("offset",self.seed[3], err=self.err[3],bounds=(-np.pi,np.pi)),   #bounds=(-np.pi,np.pi)
                 ]
     
     def updateParams(self,params):    #params is also a class, updates param value.
