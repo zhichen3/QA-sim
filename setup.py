@@ -7,4 +7,4 @@ setup(name='quasim',
       author_email='zhichen0428@gmail.com',
       license='BSD',
       packages=find_packages(),
-      install_requires=['numpy', 'matplotlib','scipy','pandas'])
+      install_requires=['numpy', 'matplotlib','scipy','pandas','corner'])
