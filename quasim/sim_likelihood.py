@@ -38,15 +38,9 @@ class sim_like(BaseLikelihood):
         self.baseline = np.array(pos_t)
 
         if len(pos_s[0]) == 4:
-<<<<<<< HEAD
             self.pos_s = np.delete(pos_s, 0, axis=1)  # delete star # part.
         else:
             self.pos_s = pos_s     # position of sources to determine midpoint
-=======
-            pos_s = np.delete(pos_s, 0, axis=1)  # delete star # part.
-
-        self.pos_s = pos_s     # position of sources to determine midpoint
->>>>>>> 026d93809408fd4cc58256d022ae3e4c73167237
         
         self.lam = lam         # lambda for observation
         self.Omega_E = 7.292e-5
