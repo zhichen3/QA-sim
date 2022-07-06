@@ -92,12 +92,8 @@ class QuaTel:
         dot = -baseline[1]*np.sin(baseline[2])*D_source[:,:,0] + baseline[0]*D_source[:,:,1] \
               +baseline[1]*np.cos(baseline[2])*D_source[:,:,2]     #(M,N)
         
-<<<<<<< HEAD
-        k_const = self.tau*1.0e-9*(self.A*self.BW*1.0e9*lam/constants.h/constants.c/2.0)**2
-=======
         k_const = self.tau*(1.0e-9)*(self.A*self.BW*(1.0e9)*lam/constants.h/constants.c/2.0)**2
->>>>>>> 3ff0ca0ec140410da1853856a8a1460842aee92e
-
+        
         s1 = np.tile(s1,(L,1)).T           #(M,N)
         s2 = np.tile(s2,(L,1)).T
         
@@ -106,13 +102,8 @@ class QuaTel:
         self.vis = vis
         
         N_xy = 1.0/8.0*k_const*(s1+s2)**2
-        
-<<<<<<< HEAD
 
-        # Multiply by 2 to take care of the fact that there are two channels for + and - modes.
-=======
         # Multiply by 2 to consider there are two pairs for each mode
->>>>>>> 3ff0ca0ec140410da1853856a8a1460842aee92e
         if (type_xy == 'pos'):
             
             res_pos = 2.0*N_xy*(1+vis*np.cos(2*np.pi/lam*dot+self.ph))        #(M,N), finds coincidence rate, rather than # of concidence
